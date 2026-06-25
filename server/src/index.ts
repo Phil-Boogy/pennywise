@@ -4,11 +4,13 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import "./db";
 
+import authRouter from "./routes/auth";
 import expenseCategoriesRouter from "./routes/expenseCategories";
 import expensesRouter from "./routes/expenses";
 import incomeCategoriesRouter from "./routes/incomeCategories";
 import incomeRouter from "./routes/income";
 import budgetsRouter from "./routes/budgets";
+
 
 dotenv.config();
 
@@ -26,6 +28,7 @@ app.get("/health", (req, res) => {
     res.json({ status: "ok" });
 });
 
+app.use("/api/auth", authRouter);
 app.use("/api/expense-categories", expenseCategoriesRouter);
 app.use("/api/expenses", expensesRouter);
 app.use("/api/income-categories", incomeCategoriesRouter);
