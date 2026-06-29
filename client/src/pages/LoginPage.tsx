@@ -104,7 +104,7 @@ const LoginPage = () => {
                         </Button>
                     </Box>
 
-                    <Typography variant="body2" align="center" mt={2} color="text.secondary">
+                    <Typography variant="body2" sx={{ textAlign: "center", mt: 2 }} color="text.secondary">
                         Don't have an account?{" "}
                         <Link to="/register" style={{ color: "inherit" }}>
                             Register
