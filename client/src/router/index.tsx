@@ -4,6 +4,7 @@ import Layout from "../components/Layout";
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import DashboardPage from "../pages/DashboardPage";
+import CategoriesPage from "../pages/CategoriesPage";
 import ProtectedRoute from "./ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
                 ),
                 children: [
                     { index: true, element: <DashboardPage /> },
+                    { path: "categories", element: <CategoriesPage /> },
                 ],
             },
         ],

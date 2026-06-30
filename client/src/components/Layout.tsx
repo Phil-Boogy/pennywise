@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, Link } from "react-router-dom";
 import { AppBar, Toolbar, Typography, Button, Box } from "@mui/material";
 import { useAppDispatch } from "../hooks/redux";
 import { clearCredentials } from "../features/auth/authSlice";
@@ -26,6 +26,9 @@ const Layout = () => {
                     <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold" }}>
                         Pennywise
                     </Typography>
+                    <Button component={Link} to="/categories" color="inherit">
+                        Categories
+                    </Button>
                     <Button onClick={handleLogout}>Logout</Button>
                 </Toolbar>
             </AppBar>
