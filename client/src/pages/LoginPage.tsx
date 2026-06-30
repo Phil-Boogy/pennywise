@@ -60,10 +60,10 @@ const LoginPage = () => {
         >
             <Card sx={{ width: "100%", maxWidth: 400, p: 2 }}>
                 <CardContent>
-                    <Typography variant="h5" fontWeight="bold" gutterBottom>
+                    <Typography variant="h5" sx={{ fontWeight: "bold" }} gutterBottom>
                         Pennywise
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" mb={3}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                         Sign in to your account
                     </Typography>
 
