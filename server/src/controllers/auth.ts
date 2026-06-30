@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
-import { findUserByEmail, createUser } from "../models/users";
+import { findUserByEmail, createUser, findUserById } from "../models/users";
+
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET!;
 const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET!;
@@ -84,7 +85,18 @@ export const refresh = async (req: Request, res: Response) => {
     try {
         const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET) as { userId: number };
         const accessToken = generateAccessToken(decoded.userId);
-        res.json({ accessToken });
+
+        const userResult = await findUserById(decoded.userId);
+        if (userResult.rows.length === 0) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        const user = userResult.rows[0];
+
+        res.json({
+            accessToken,
+            user: { id: user.id, email: user.email },
+        });
     } catch (error) {
         res.status(403).json({ message: "Invalid or expired refresh token" });
     }

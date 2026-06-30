@@ -29,6 +29,9 @@ const Layout = () => {
                     <Button component={Link} to="/categories" color="inherit">
                         Categories
                     </Button>
+                    <Button component={Link} to="/expenses" color="inherit">
+                        Expenses
+                    </Button>
                     <Button onClick={handleLogout}>Logout</Button>
                 </Toolbar>
             </AppBar>
