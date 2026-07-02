@@ -7,6 +7,7 @@ import DashboardPage from "../pages/DashboardPage";
 import CategoriesPage from "../pages/CategoriesPage";
 import ExpensesPage from "../pages/ExpensesPage";
 import IncomePage from "../pages/IncomePage";
+import BudgetPage from "../pages/BudgetPage";
 import ProtectedRoute from "./ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
                     { path: "categories", element: <CategoriesPage /> },
                     { path: "expenses", element: <ExpensesPage /> },
                     { path: "income", element: <IncomePage /> },
+                    { path: "budget", element: <BudgetPage /> },
                 ],
             },
         ],

@@ -26,6 +26,16 @@ export const editBudget = (id: string, category_id: number, amount: number, mont
     );
 };
 
+export const getBudgetsByMonth = (month: string) => {
+    return pool.query<Budget>(
+        `SELECT budget.id, expense_categories.name AS category, budget.category_id, budget.amount, budget.month
+     FROM budget
+     JOIN expense_categories ON budget.category_id = expense_categories.id
+     WHERE budget.month = $1`,
+        [month]
+    );
+};
+
 export const deleteBudget = (id: string) => {
     return pool.query<Budget>(
         `DELETE FROM budget

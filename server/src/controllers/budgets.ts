@@ -4,6 +4,7 @@ import {
     createNewBudget,
     editBudget,
     deleteBudget,
+    getBudgetsByMonth as getBudgetsByMonthModel,
 } from "../models/budgets";
 import { CreateBudgetBody, EditBudgetBody, IdParam } from "../types/index";
 
@@ -14,6 +15,17 @@ export const getBudgets = async (req: Request, res: Response) => {
     } catch (error) {
         console.log(error);
         res.status(500).json({ message: "Awwww Shoot" });
+    }
+};
+
+export const getBudgetsByMonth = async (req: Request<{ month: string }>, res: Response) => {
+    const { month } = req.params;
+    try {
+        const result = await getBudgetsByMonthModel(month);
+        res.json(result.rows);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "something went wrong" });
     }
 };
 
