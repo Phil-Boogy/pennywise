@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import {
     getAllIncomes,
     createNewIncome,
@@ -6,10 +6,11 @@ import {
     deleteIncome,
 } from "../models/income";
 import { CreateIncomeBody, EditIncomeBody, IdParam } from "../types/index";
+import { AuthedRequest } from "../middleware/auth";
 
-export const getIncomes = async (req: Request, res: Response) => {
+export const getIncomes = async (req: AuthedRequest, res: Response) => {
     try {
-        const result = await getAllIncomes();
+        const result = await getAllIncomes(req.userId!);
         res.json(result.rows);
     } catch (error) {
         console.log(error);
@@ -18,12 +19,12 @@ export const getIncomes = async (req: Request, res: Response) => {
 };
 
 export const createIncome = async (
-    req: Request<{}, {}, CreateIncomeBody>,
+    req: AuthedRequest<{}, {}, CreateIncomeBody>,
     res: Response
 ) => {
     const { category_id, description, amount } = req.body;
     try {
-        const result = await createNewIncome(category_id, description, amount);
+        const result = await createNewIncome(category_id, description, amount, req.userId!);
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.log(error);
@@ -32,13 +33,13 @@ export const createIncome = async (
 };
 
 export const editSavedIncome = async (
-    req: Request<IdParam, {}, EditIncomeBody>,
+    req: AuthedRequest<IdParam, {}, EditIncomeBody>,
     res: Response
 ) => {
     const { id } = req.params;
     const { category_id, description, amount } = req.body;
     try {
-        const result = await editIncome(id, category_id, description, amount);
+        const result = await editIncome(id, category_id, description, amount, req.userId!);
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.log(error);
@@ -47,12 +48,12 @@ export const editSavedIncome = async (
 };
 
 export const deleteSavedIncome = async (
-    req: Request<IdParam>,
+    req: AuthedRequest<IdParam>,
     res: Response
 ) => {
     const { id } = req.params;
     try {
-        const result = await deleteIncome(id);
+        const result = await deleteIncome(id, req.userId!);
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.log(error);

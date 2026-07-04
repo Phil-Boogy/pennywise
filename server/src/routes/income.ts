@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authenticateToken } from "../middleware/auth";
 import {
     getIncomes,
     createIncome,
@@ -8,6 +9,7 @@ import {
 
 const router = Router();
 
+router.use(authenticateToken);
 router.get("/", getIncomes);
 router.post("/", createIncome);
 router.put("/:id", editSavedIncome);

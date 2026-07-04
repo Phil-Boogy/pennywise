@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import {
     getAllExpenseCategories,
     createNewExpenseCategory,
@@ -6,10 +6,11 @@ import {
     deleteExpenseCategory,
 } from "../models/expenseCategories";
 import { CreateCategoryBody, EditCategoryBody, IdParam } from "../types/index";
+import { AuthedRequest } from "../middleware/auth";
 
-export const getExpenseCategories = async (req: Request, res: Response) => {
+export const getExpenseCategories = async (req: AuthedRequest, res: Response) => {
     try {
-        const result = await getAllExpenseCategories();
+        const result = await getAllExpenseCategories(req.userId!);
         res.json(result.rows);
     } catch (error) {
         console.log(error);
@@ -18,12 +19,12 @@ export const getExpenseCategories = async (req: Request, res: Response) => {
 };
 
 export const createExpenseCategory = async (
-    req: Request<{}, {}, CreateCategoryBody>,
+    req: AuthedRequest<{}, {}, CreateCategoryBody>,
     res: Response
 ) => {
     const { name } = req.body;
     try {
-        const result = await createNewExpenseCategory(name);
+        const result = await createNewExpenseCategory(name, req.userId!);
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.log(error);
@@ -32,13 +33,13 @@ export const createExpenseCategory = async (
 };
 
 export const editSavedExpenseCategory = async (
-    req: Request<IdParam, {}, EditCategoryBody>,
+    req: AuthedRequest<IdParam, {}, EditCategoryBody>,
     res: Response
 ) => {
     const { id } = req.params;
     const { name } = req.body;
     try {
-        const result = await editExpenseCategory(id, name);
+        const result = await editExpenseCategory(id, name, req.userId!);
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.log(error);
@@ -47,12 +48,12 @@ export const editSavedExpenseCategory = async (
 };
 
 export const deleteSavedExpenseCategory = async (
-    req: Request<IdParam>,
+    req: AuthedRequest<IdParam>,
     res: Response
 ) => {
     const { id } = req.params;
     try {
-        const result = await deleteExpenseCategory(id);
+        const result = await deleteExpenseCategory(id, req.userId!);
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.log(error);

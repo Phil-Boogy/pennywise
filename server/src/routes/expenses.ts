@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authenticateToken } from "../middleware/auth";
 import {
     getExpenses,
     createExpense,
@@ -8,6 +9,7 @@ import {
 
 const router = Router();
 
+router.use(authenticateToken);
 router.get("/", getExpenses);
 router.post("/", createExpense);
 router.put("/:id", editSavedExpense);

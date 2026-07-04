@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import {
     getAllBudgets,
     createNewBudget,
@@ -7,10 +7,11 @@ import {
     getBudgetsByMonth as getBudgetsByMonthModel,
 } from "../models/budgets";
 import { CreateBudgetBody, EditBudgetBody, IdParam } from "../types/index";
+import { AuthedRequest } from "../middleware/auth";
 
-export const getBudgets = async (req: Request, res: Response) => {
+export const getBudgets = async (req: AuthedRequest, res: Response) => {
     try {
-        const result = await getAllBudgets();
+        const result = await getAllBudgets(req.userId!);
         res.json(result.rows);
     } catch (error) {
         console.log(error);
@@ -18,10 +19,13 @@ export const getBudgets = async (req: Request, res: Response) => {
     }
 };
 
-export const getBudgetsByMonth = async (req: Request<{ month: string }>, res: Response) => {
+export const getBudgetsByMonth = async (
+    req: AuthedRequest<{ month: string }>,
+    res: Response
+) => {
     const { month } = req.params;
     try {
-        const result = await getBudgetsByMonthModel(month);
+        const result = await getBudgetsByMonthModel(month, req.userId!);
         res.json(result.rows);
     } catch (error) {
         console.log(error);
@@ -30,12 +34,12 @@ export const getBudgetsByMonth = async (req: Request<{ month: string }>, res: Re
 };
 
 export const createBudget = async (
-    req: Request<{}, {}, CreateBudgetBody>,
+    req: AuthedRequest<{}, {}, CreateBudgetBody>,
     res: Response
 ) => {
     const { category_id, amount, month } = req.body;
     try {
-        const result = await createNewBudget(category_id, amount, month);
+        const result = await createNewBudget(category_id, amount, month, req.userId!);
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.log(error);
@@ -44,13 +48,13 @@ export const createBudget = async (
 };
 
 export const editSavedBudget = async (
-    req: Request<IdParam, {}, EditBudgetBody>,
+    req: AuthedRequest<IdParam, {}, EditBudgetBody>,
     res: Response
 ) => {
     const { id } = req.params;
     const { category_id, amount, month } = req.body;
     try {
-        const result = await editBudget(id, category_id, amount, month);
+        const result = await editBudget(id, category_id, amount, month, req.userId!);
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.log(error);
@@ -59,12 +63,12 @@ export const editSavedBudget = async (
 };
 
 export const deleteSavedBudget = async (
-    req: Request<IdParam>,
+    req: AuthedRequest<IdParam>,
     res: Response
 ) => {
     const { id } = req.params;
     try {
-        const result = await deleteBudget(id);
+        const result = await deleteBudget(id, req.userId!);
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.log(error);

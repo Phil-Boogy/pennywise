@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import {
     getAllExpenses,
     createNewExpense,
@@ -6,10 +6,11 @@ import {
     deleteExpense,
 } from "../models/expenses";
 import { CreateExpenseBody, EditExpenseBody, IdParam } from "../types/index";
+import { AuthedRequest } from "../middleware/auth";
 
-export const getExpenses = async (req: Request, res: Response) => {
+export const getExpenses = async (req: AuthedRequest, res: Response) => {
     try {
-        const result = await getAllExpenses();
+        const result = await getAllExpenses(req.userId!);
         res.json(result.rows);
     } catch (error) {
         console.log(error);
@@ -18,12 +19,12 @@ export const getExpenses = async (req: Request, res: Response) => {
 };
 
 export const createExpense = async (
-    req: Request<{}, {}, CreateExpenseBody>,
+    req: AuthedRequest<{}, {}, CreateExpenseBody>,
     res: Response
 ) => {
     const { category_id, description, amount } = req.body;
     try {
-        const result = await createNewExpense(category_id, description, amount);
+        const result = await createNewExpense(category_id, description, amount, req.userId!);
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.log(error);
@@ -32,13 +33,13 @@ export const createExpense = async (
 };
 
 export const editSavedExpense = async (
-    req: Request<IdParam, {}, EditExpenseBody>,
+    req: AuthedRequest<IdParam, {}, EditExpenseBody>,
     res: Response
 ) => {
     const { id } = req.params;
     const { category_id, description, amount } = req.body;
     try {
-        const result = await editExpense(id, category_id, description, amount);
+        const result = await editExpense(id, category_id, description, amount, req.userId!);
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.log(error);
@@ -47,12 +48,12 @@ export const editSavedExpense = async (
 };
 
 export const deleteSavedExpense = async (
-    req: Request<IdParam>,
+    req: AuthedRequest<IdParam>,
     res: Response
 ) => {
     const { id } = req.params;
     try {
-        const result = await deleteExpense(id);
+        const result = await deleteExpense(id, req.userId!);
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.log(error);

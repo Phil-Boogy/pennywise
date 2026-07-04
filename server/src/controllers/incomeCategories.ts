@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import {
     getAllIncomeCategories,
     createNewIncomeCategory,
@@ -6,10 +6,11 @@ import {
     deleteIncomeCategory,
 } from "../models/incomeCategories";
 import { CreateCategoryBody, EditCategoryBody, IdParam } from "../types/index";
+import { AuthedRequest } from "../middleware/auth";
 
-export const getIncomeCategories = async (req: Request, res: Response) => {
+export const getIncomeCategories = async (req: AuthedRequest, res: Response) => {
     try {
-        const result = await getAllIncomeCategories();
+        const result = await getAllIncomeCategories(req.userId!);
         res.json(result.rows);
     } catch (error) {
         console.log(error);
@@ -18,12 +19,12 @@ export const getIncomeCategories = async (req: Request, res: Response) => {
 };
 
 export const createIncomeCategory = async (
-    req: Request<{}, {}, CreateCategoryBody>,
+    req: AuthedRequest<{}, {}, CreateCategoryBody>,
     res: Response
 ) => {
     const { name } = req.body;
     try {
-        const result = await createNewIncomeCategory(name);
+        const result = await createNewIncomeCategory(name, req.userId!);
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.log(error);
@@ -32,13 +33,13 @@ export const createIncomeCategory = async (
 };
 
 export const editSavedIncomeCategory = async (
-    req: Request<IdParam, {}, EditCategoryBody>,
+    req: AuthedRequest<IdParam, {}, EditCategoryBody>,
     res: Response
 ) => {
     const { id } = req.params;
     const { name } = req.body;
     try {
-        const result = await editIncomeCategory(id, name);
+        const result = await editIncomeCategory(id, name, req.userId!);
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.log(error);
@@ -47,12 +48,12 @@ export const editSavedIncomeCategory = async (
 };
 
 export const deleteSavedIncomeCategory = async (
-    req: Request<IdParam>,
+    req: AuthedRequest<IdParam>,
     res: Response
 ) => {
     const { id } = req.params;
     try {
-        const result = await deleteIncomeCategory(id);
+        const result = await deleteIncomeCategory(id, req.userId!);
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.log(error);

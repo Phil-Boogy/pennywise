@@ -22,6 +22,14 @@ export const refreshToken = async () => {
     return response.data;
 };
 
+export const setAuthToken = (token: string | null) => {
+    if (token) {
+        api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    } else {
+        delete api.defaults.headers.common["Authorization"];
+    }
+};
+
 export const logoutUser = async () => {
     const response = await api.post("/api/auth/logout");
     return response.data;

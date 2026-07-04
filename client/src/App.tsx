@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
-import { useAppDispatch } from "./hooks/redux";
+import { useAppDispatch, useAppSelector } from "./hooks/redux";
 import { setCredentials } from "./features/auth/authSlice";
-import { refreshToken } from "./api/auth";
+import { refreshToken, setAuthToken } from "./api/auth";
 
 const App = () => {
   const dispatch = useAppDispatch();
   const [isLoading, setIsLoading] = useState(true);
+  const accessToken = useAppSelector((state) => state.auth.accessToken);
+
+  useEffect(() => {
+    setAuthToken(accessToken);
+  }, [accessToken]);
 
   useEffect(() => {
     const attemptRefresh = async () => {

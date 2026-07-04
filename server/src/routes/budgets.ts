@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authenticateToken } from "../middleware/auth";
 import {
     getBudgets,
     createBudget,
@@ -8,7 +9,7 @@ import {
 } from "../controllers/budgets";
 
 const router = Router();
-
+router.use(authenticateToken);
 router.get("/", getBudgets);
 router.get("/month/:month", getBudgetsByMonth);
 router.post("/", createBudget);

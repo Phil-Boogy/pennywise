@@ -1,9 +1,15 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-export interface AuthedRequest extends Request {
+export interface AuthedRequest<
+    P = {},
+    ResBody = {},
+    ReqBody = {},
+    ReqQuery = {}
+> extends Request<P, ResBody, ReqBody, ReqQuery> {
     userId?: number;
 }
+
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET!;
 
@@ -13,7 +19,7 @@ export const authenticateToken = (
     next: NextFunction
 ) => {
     const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1]; // Bearer <token>
+    const token = authHeader && authHeader.split(" ")[1];
 
     if (!token) {
         res.status(401).json({ message: "No access token" });

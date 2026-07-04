@@ -1,35 +1,36 @@
 import pool from "../db";
 import { ExpenseCategory } from "../types/index";
 
-export const getAllExpenseCategories = () => {
+export const getAllExpenseCategories = (user_id: number) => {
     return pool.query<ExpenseCategory>(`
-    SELECT id, name
-    FROM expense_categories
-  `);
+        SELECT id, name
+        FROM expense_categories
+        WHERE user_id = $1
+    `, [user_id]);
 };
 
-export const createNewExpenseCategory = (categoryName: string) => {
+export const createNewExpenseCategory = (categoryName: string, user_id: number) => {
     return pool.query<ExpenseCategory>(
-        `INSERT INTO expense_categories (name) VALUES ($1) RETURNING *`,
-        [categoryName]
+        `INSERT INTO expense_categories (name, user_id) VALUES ($1, $2) RETURNING *`,
+        [categoryName, user_id]
     );
 };
 
-export const editExpenseCategory = (id: string, categoryName: string) => {
+export const editExpenseCategory = (id: string, categoryName: string, user_id: number) => {
     return pool.query<ExpenseCategory>(
         `UPDATE expense_categories
-     SET name = $1
-     WHERE id = $2
-     RETURNING *`,
-        [categoryName, id]
+        SET name = $1
+        WHERE id = $2 AND user_id = $3
+        RETURNING *`,
+        [categoryName, id, user_id]
     );
 };
 
-export const deleteExpenseCategory = (id: string) => {
+export const deleteExpenseCategory = (id: string, user_id: number) => {
     return pool.query<ExpenseCategory>(
         `DELETE FROM expense_categories
-     WHERE id = $1
-     RETURNING *`,
-        [id]
+        WHERE id = $1 AND user_id = $2
+        RETURNING *`,
+        [id, user_id]
     );
 };
