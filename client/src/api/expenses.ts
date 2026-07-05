@@ -13,6 +13,11 @@ export const getExpenses = async (): Promise<Expense[]> => {
     return response.data;
 };
 
+export const getExpensesByMonth = async (month: string): Promise<Expense[]> => {
+    const response = await api.get(`/api/expenses/month/${month}`);
+    return response.data;
+};
+
 export const createExpense = async (
     category_id: number,
     description: string,

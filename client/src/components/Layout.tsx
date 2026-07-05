@@ -26,6 +26,9 @@ const Layout = () => {
                     <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: "bold" }}>
                         Pennywise
                     </Typography>
+                    <Button component={Link} to="/" color="inherit">
+                        Dashboard
+                    </Button>
                     <Button component={Link} to="/categories" color="inherit">
                         Categories
                     </Button>

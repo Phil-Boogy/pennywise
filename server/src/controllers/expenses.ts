@@ -4,6 +4,7 @@ import {
     createNewExpense,
     editExpense,
     deleteExpense,
+    getExpensesByMonth as getExpensesByMonthModel,
 } from "../models/expenses";
 import { CreateExpenseBody, EditExpenseBody, IdParam } from "../types/index";
 import { AuthedRequest } from "../middleware/auth";
@@ -11,6 +12,20 @@ import { AuthedRequest } from "../middleware/auth";
 export const getExpenses = async (req: AuthedRequest, res: Response) => {
     try {
         const result = await getAllExpenses(req.userId!);
+        res.json(result.rows);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "something went wrong" });
+    }
+};
+
+export const getExpensesByMonth = async (
+    req: AuthedRequest<{ month: string }>,
+    res: Response
+) => {
+    const { month } = req.params;
+    try {
+        const result = await getExpensesByMonthModel(month, req.userId!);
         res.json(result.rows);
     } catch (error) {
         console.log(error);

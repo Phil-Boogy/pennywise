@@ -36,3 +36,14 @@ export const deleteExpense = (id: string, user_id: number) => {
         [id, user_id]
     );
 };
+
+export const getExpensesByMonth = (month: string, user_id: number) => {
+    return pool.query<Expense>(`
+        SELECT expenses.id, expense_categories.name AS category, expenses.description, expenses.amount, expenses.created_at
+        FROM expenses
+        JOIN expense_categories ON expenses.category_id = expense_categories.id
+        WHERE expenses.user_id = $1
+        AND DATE_TRUNC('month', expenses.created_at) = $2::date
+        ORDER BY expenses.created_at DESC
+    `, [user_id, month]);
+};

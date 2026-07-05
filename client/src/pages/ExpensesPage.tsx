@@ -115,8 +115,8 @@ const ExpensesPage = () => {
                             }
                         >
                             <ListItemText
-                                primary={`${expense.description} — ₪${expense.amount}`}
-                                secondary={expense.category}
+                                primary={`${expense.category} — ₪${expense.amount}`}
+                                secondary={expense.description}
                             />
                         </ListItem>
                     ))}

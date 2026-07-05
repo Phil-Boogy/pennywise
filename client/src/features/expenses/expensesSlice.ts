@@ -21,6 +21,13 @@ export const fetchExpenses = createAsyncThunk(
     }
 );
 
+export const fetchExpensesByMonth = createAsyncThunk(
+    "expenses/fetchExpensesByMonth",
+    async (month: string) => {
+        return await expensesApi.getExpensesByMonth(month);
+    }
+);
+
 export const addExpense = createAsyncThunk(
     "expenses/addExpense",
     async ({
@@ -51,6 +58,9 @@ const expensesSlice = createSlice({
     extraReducers: (builder) => {
         builder
             .addCase(fetchExpenses.fulfilled, (state, action) => {
+                state.items = action.payload;
+            })
+            .addCase(fetchExpensesByMonth.fulfilled, (state, action) => {
                 state.items = action.payload;
             })
             .addCase(addExpense.fulfilled, (state, action) => {
