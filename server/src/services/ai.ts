@@ -74,8 +74,13 @@ Suggest a monthly budget. Return JSON in this exact format:
     const content = message.content[0];
     if (content.type !== "text") {
         throw new Error("Unexpected response type from Claude");
-    }
+    };
 
-    const parsed = JSON.parse(content.text) as BudgetSuggestionResponse;
+
+    const cleaned = content.text
+        .replace(/```json\n?/g, "")
+        .replace(/```\n?/g, "")
+        .trim();
+    const parsed = JSON.parse(cleaned) as BudgetSuggestionResponse;
     return parsed;
 };

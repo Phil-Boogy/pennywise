@@ -11,6 +11,7 @@ import incomeCategoriesRouter from "./routes/incomeCategories";
 import incomeRouter from "./routes/income";
 import budgetsRouter from "./routes/budgets";
 import monthlySettingsRouter from "./routes/monthlySettings";
+import aiRouter from "./routes/ai";
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.use("/api/income-categories", incomeCategoriesRouter);
 app.use("/api/income", incomeRouter);
 app.use("/api/budgets", budgetsRouter);
 app.use("/api/monthly-settings", monthlySettingsRouter);
+app.use("/api/ai", aiRouter);
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
