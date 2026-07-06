@@ -8,6 +8,8 @@ import {
     Alert,
     Divider,
 } from "@mui/material";
+import CircularProgress from "@mui/material/CircularProgress";
+
 import { useAppDispatch, useAppSelector } from "../hooks/redux";
 import { fetchExpenseCategories } from "../features/categories/categoriesSlice";
 import { fetchIncomes } from "../features/income/incomeSlice";
@@ -16,6 +18,9 @@ import {
     addBudgetItem,
     updateBudgetItem,
 } from "../features/budget/budgetSlice";
+
+import { getSuggestedBudget } from "../api/ai";
+import type { BudgetSuggestion } from "../api/ai";
 
 import {
     fetchMonthlySettings,
@@ -37,6 +42,8 @@ const BudgetPage = () => {
     const [amounts, setAmounts] = useState<Record<number, string>>({});
     const [savingsGoal, setSavingsGoal] = useState("");
     const [saved, setSaved] = useState(false);
+    const [aiSuggestion, setAiSuggestion] = useState<BudgetSuggestion | null>(null);
+    const [aiLoading, setAiLoading] = useState(false);
 
     const currentMonth = getCurrentMonth();
 
@@ -73,6 +80,24 @@ const BudgetPage = () => {
 
     const handleAmountChange = (categoryId: number, value: string) => {
         setAmounts((prev) => ({ ...prev, [categoryId]: value }));
+    };
+
+    const handleAiSuggest = async () => {
+        setAiLoading(true);
+        try {
+            const suggestion = await getSuggestedBudget(currentMonth, savings);
+            setAiSuggestion(suggestion);
+            // pre-populate amounts from AI suggestions
+            const suggestedAmounts: Record<number, string> = {};
+            suggestion.suggestions.forEach((s) => {
+                suggestedAmounts[s.category_id] = String(s.suggested_amount);
+            });
+            setAmounts(suggestedAmounts);
+        } catch (error) {
+            console.error("AI suggestion failed:", error);
+        } finally {
+            setAiLoading(false);
+        }
     };
 
     const handleSave = async () => {
@@ -126,6 +151,33 @@ const BudgetPage = () => {
                     value={savingsGoal}
                     onChange={(e) => setSavingsGoal(e.target.value)}
                 />
+            </Paper>
+
+            <Paper sx={{ p: 2, mb: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
+                            AI Budget Suggestion
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Let AI suggest a budget based on your income, savings goal, and history
+                        </Typography>
+                    </Box>
+                    <Button
+                        variant="outlined"
+                        onClick={handleAiSuggest}
+                        disabled={aiLoading || savings === 0 && totalIncome === 0}
+                        sx={{ minWidth: 140 }}
+                    >
+                        {aiLoading ? <CircularProgress size={20} /> : "✨ AI Suggest"}
+                    </Button>
+                </Box>
+
+                {aiSuggestion && (
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                        {aiSuggestion.summary}
+                    </Alert>
+                )}
             </Paper>
 
             <Paper sx={{ p: 2, mb: 2 }}>
