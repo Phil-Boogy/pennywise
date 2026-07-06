@@ -41,6 +41,9 @@ const Layout = () => {
                     <Button component={Link} to="/budget" color="inherit">
                         Budget
                     </Button>
+                    <Button component={Link} to="/upload" color="inherit">
+                        Upload
+                    </Button>
                     <Button onClick={handleLogout}>Logout</Button>
                 </Toolbar>
             </AppBar>
