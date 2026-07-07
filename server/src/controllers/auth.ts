@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from "../constants/defaultCategories";
+import { createNewExpenseCategory } from "../models/expenseCategories";
+import { createNewIncomeCategory } from "../models/incomeCategories";
 import { findUserByEmail, createUser, findUserById } from "../models/users";
 
 const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET!;
@@ -30,6 +33,15 @@ export const register = async (
         const user = result.rows[0];
         const accessToken = generateAccessToken(user.id);
         const refreshToken = generateRefreshToken(user.id);
+        // seed default categories for new user
+        await Promise.all([
+            ...DEFAULT_EXPENSE_CATEGORIES.map((name) =>
+                createNewExpenseCategory(name, user.id)
+            ),
+            ...DEFAULT_INCOME_CATEGORIES.map((name) =>
+                createNewIncomeCategory(name, user.id)
+            ),
+        ]);
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
