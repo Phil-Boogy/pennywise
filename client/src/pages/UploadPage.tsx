@@ -12,10 +12,13 @@ import {
     Alert,
     CircularProgress,
     Chip,
+    Divider,
 } from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import type { ParsedTransaction } from "../utils/csvParsers";
 import { parseMizrahiCSV, parseCalCSV, parseIsracardCSV, enrichWithOccurrences } from "../utils/csvParsers";
+import { analyzeTransactions } from "../api/ai";
+import type { TransactionAnalysis } from "../api/ai";
 
 type BankFormat = "mizrahi" | "cal" | "isracard";
 
@@ -34,6 +37,7 @@ const parsers: Record<BankFormat, (csv: string) => ParsedTransaction[]> = {
 const UploadPage = () => {
     const [bankFormat, setBankFormat] = useState<BankFormat>("mizrahi");
     const [transactions, setTransactions] = useState<ParsedTransaction[]>([]);
+    const [analysis, setAnalysis] = useState<TransactionAnalysis | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [fileName, setFileName] = useState<string | null>(null);
@@ -45,6 +49,7 @@ const UploadPage = () => {
         setFileName(file.name);
         setError(null);
         setTransactions([]);
+        setAnalysis(null);
 
         const reader = new FileReader();
         reader.onload = (event) => {
@@ -67,6 +72,26 @@ const UploadPage = () => {
         reader.readAsText(file);
     };
 
+    const handleAnalyze = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const result = await analyzeTransactions(
+                transactions.map((t) => ({
+                    date: t.date,
+                    merchant: t.merchant,
+                    amount: t.amount,
+                    type: t.type,
+                    occurrences: t.occurrences ?? 1,
+                }))
+            );
+            setAnalysis(result);
+        } catch (err) {
+            setError("AI analysis failed. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const credits = transactions.filter((t) => t.type === "credit");
     const debits = transactions.filter((t) => t.type === "debit");
@@ -91,6 +116,7 @@ const UploadPage = () => {
                             setTransactions([]);
                             setFileName(null);
                             setError(null);
+                            setAnalysis(null);
                         }}
                         sx={{ minWidth: 180 }}
                     >
@@ -163,12 +189,86 @@ const UploadPage = () => {
                         variant="contained"
                         fullWidth
                         disabled={loading}
-                        onClick={() => {
-                            console.log("Sending to AI:", transactions);
-                        }}
+                        onClick={handleAnalyze}
+                        sx={{ mb: 3 }}
                     >
                         {loading ? <CircularProgress size={20} /> : "✨ Analyze with AI"}
                     </Button>
+                </>
+            )}
+
+            {analysis && (
+                <>
+                    <Paper sx={{ p: 2, mb: 2 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
+                            Analysis Summary
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            {analysis.summary}
+                        </Typography>
+                    </Paper>
+
+                    {analysis.income_sources.length > 0 && (
+                        <Paper sx={{ p: 2, mb: 2 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
+                                Income Sources
+                            </Typography>
+                            <List dense>
+                                {analysis.income_sources.map((s, i) => (
+                                    <ListItem key={i}>
+                                        <ListItemText
+                                            primary={s.merchant}
+                                            secondary={`₪${s.amounts.join(", ₪")}`}
+                                        />
+                                        {s.is_salary && <Chip label="Salary" color="success" size="small" />}
+                                    </ListItem>
+                                ))}
+                            </List>
+                        </Paper>
+                    )}
+
+                    {analysis.recurring_expenses.length > 0 && (
+                        <Paper sx={{ p: 2, mb: 2 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
+                                Recurring Expenses
+                            </Typography>
+                            <List dense>
+                                {analysis.recurring_expenses.map((r, i) => (
+                                    <ListItem key={i}>
+                                        <ListItemText
+                                            primary={r.merchant}
+                                            secondary={r.category_name ?? "Uncategorized"}
+                                        />
+                                        <Typography variant="body2">
+                                            ₪{r.estimated_monthly_amount.toLocaleString()}/mo
+                                        </Typography>
+                                    </ListItem>
+                                ))}
+                            </List>
+                        </Paper>
+                    )}
+
+                    <Paper sx={{ p: 2, mb: 2 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
+                            Categorized Transactions
+                        </Typography>
+                        <Divider sx={{ mb: 1 }} />
+                        <List dense>
+                            {analysis.transactions
+                                .filter((t) => t.type === "debit")
+                                .map((t, i) => (
+                                    <ListItem key={i} divider>
+                                        <ListItemText
+                                            primary={`${t.merchant} — ₪${Math.abs(t.amount).toLocaleString()}`}
+                                            secondary={t.category_name ?? "Uncategorized"}
+                                        />
+                                        {t.is_recurring && (
+                                            <Chip label="Recurring" variant="outlined" size="small" />
+                                        )}
+                                    </ListItem>
+                                ))}
+                        </List>
+                    </Paper>
                 </>
             )}
         </Box>

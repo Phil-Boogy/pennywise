@@ -5,8 +5,7 @@ import expensesReducer from "../features/expenses/expensesSlice";
 import incomeReducer from "../features/income/incomeSlice";
 import budgetReducer from "../features/budget/budgetSlice";
 import monthlySettingsReducer from "../features/monthlySettings/monthlySettingsSlice";
-
-
+import cashExpensesReducer from "../features/cashExpenses/cashExpensesSlice";
 
 export const store = configureStore({
     reducer: {
@@ -16,7 +15,7 @@ export const store = configureStore({
         income: incomeReducer,
         budget: budgetReducer,
         monthlySettings: monthlySettingsReducer,
-
+        cashExpenses: cashExpensesReducer,
     },
 });
 
