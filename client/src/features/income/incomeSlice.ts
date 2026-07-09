@@ -21,6 +21,13 @@ export const fetchIncomes = createAsyncThunk(
     }
 );
 
+export const fetchIncomesByMonth = createAsyncThunk(
+    "income/fetchIncomesByMonth",
+    async (month: string) => {
+        return await incomeApi.getIncomesByMonth(month);
+    }
+);
+
 export const addIncome = createAsyncThunk(
     "income/addIncome",
     async ({
@@ -58,6 +65,9 @@ const incomeSlice = createSlice({
             })
             .addCase(removeIncome.fulfilled, (state, action) => {
                 state.items = state.items.filter((i) => i.id !== action.payload);
+            })
+            .addCase(fetchIncomesByMonth.fulfilled, (state, action) => {
+                state.items = action.payload;
             });
     },
 });

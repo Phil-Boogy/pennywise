@@ -13,6 +13,11 @@ export const getIncomes = async (): Promise<Income[]> => {
     return response.data;
 };
 
+export const getIncomesByMonth = async (month: string): Promise<Income[]> => {
+    const response = await api.get(`/api/income/month/${month}`);
+    return response.data;
+};
+
 export const createIncome = async (
     category_id: number,
     description: string,

@@ -4,6 +4,7 @@ import {
     createNewIncome,
     editIncome,
     deleteIncome,
+    getIncomesByMonth as getIncomesByMonthModel,
 } from "../models/income";
 import { CreateIncomeBody, EditIncomeBody, IdParam } from "../types/index";
 import { AuthedRequest } from "../middleware/auth";
@@ -11,6 +12,20 @@ import { AuthedRequest } from "../middleware/auth";
 export const getIncomes = async (req: AuthedRequest, res: Response) => {
     try {
         const result = await getAllIncomes(req.userId!);
+        res.json(result.rows);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "something went wrong" });
+    }
+};
+
+export const getIncomesByMonth = async (
+    req: AuthedRequest<{ month: string }>,
+    res: Response
+) => {
+    const { month } = req.params;
+    try {
+        const result = await getIncomesByMonthModel(month, req.userId!);
         res.json(result.rows);
     } catch (error) {
         console.log(error);

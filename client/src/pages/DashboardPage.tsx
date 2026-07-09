@@ -10,7 +10,7 @@ import {
 import { useAppDispatch, useAppSelector } from "../hooks/redux";
 import { fetchExpensesByMonth } from "../features/expenses/expensesSlice";
 import { fetchBudgetsByMonth } from "../features/budget/budgetSlice";
-import { fetchIncomes } from "../features/income/incomeSlice";
+import { fetchIncomesByMonth } from "../features/income/incomeSlice";
 import { fetchMonthlySettings } from "../features/monthlySettings/monthlySettingsSlice";
 import { fetchExpenseCategories } from "../features/categories/categoriesSlice";
 
@@ -23,7 +23,6 @@ const DashboardPage = () => {
     const dispatch = useAppDispatch();
     const { items: expenses } = useAppSelector((state) => state.expenses);
     const { items: budgets } = useAppSelector((state) => state.budget);
-    const { items: incomes } = useAppSelector((state) => state.income);
     const { settings } = useAppSelector((state) => state.monthlySettings);
     const { expenseCategories } = useAppSelector((state) => state.categories);
 
@@ -32,12 +31,12 @@ const DashboardPage = () => {
     useEffect(() => {
         dispatch(fetchExpensesByMonth(currentMonth));
         dispatch(fetchBudgetsByMonth(currentMonth));
-        dispatch(fetchIncomes());
+        dispatch(fetchIncomesByMonth(currentMonth));
         dispatch(fetchMonthlySettings(currentMonth));
         dispatch(fetchExpenseCategories());
     }, [dispatch, currentMonth]);
 
-    const totalIncome = incomes.reduce((sum, i) => sum + Number(i.amount), 0);
+    const totalIncome = Number(settings?.confirmed_income) || 0;
     const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
     const totalBudgeted = budgets.reduce((sum, b) => sum + Number(b.amount), 0);
     const savingsGoal = Number(settings?.savings_goal) || 0;

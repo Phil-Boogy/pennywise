@@ -11,6 +11,17 @@ export const getAllIncomes = (user_id: number) => {
     `, [user_id]);
 };
 
+export const getIncomesByMonth = (month: string, user_id: number) => {
+    return pool.query<Income>(`
+    SELECT income.id, income_categories.name AS category, income.description, income.amount, income.created_at
+    FROM income
+    JOIN income_categories ON income.category_id = income_categories.id
+    WHERE income.user_id = $1
+    AND DATE_TRUNC('month', income.created_at) = $2::date
+    ORDER BY income.created_at DESC
+  `, [user_id, month]);
+};
+
 export const createNewIncome = (category_id: number, description: string, amount: number, user_id: number) => {
     return pool.query<Income>(
         `INSERT INTO income (category_id, description, amount, user_id) VALUES ($1, $2, $3, $4) RETURNING *`,

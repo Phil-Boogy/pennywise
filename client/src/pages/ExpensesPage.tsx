@@ -14,7 +14,7 @@ import {
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useAppDispatch, useAppSelector } from "../hooks/redux";
 import { fetchExpenseCategories } from "../features/categories/categoriesSlice";
-import { fetchExpenses, addExpense, removeExpense } from "../features/expenses/expensesSlice";
+import { fetchExpensesByMonth, addExpense, removeExpense } from "../features/expenses/expensesSlice";
 
 const ExpensesPage = () => {
     const dispatch = useAppDispatch();
@@ -26,7 +26,7 @@ const ExpensesPage = () => {
     const [amount, setAmount] = useState("");
 
     useEffect(() => {
-        dispatch(fetchExpenses());
+        dispatch(fetchExpensesByMonth(getCurrentMonth()));
         dispatch(fetchExpenseCategories());
     }, [dispatch]);
 
@@ -43,6 +43,11 @@ const ExpensesPage = () => {
 
         setDescription("");
         setAmount("");
+    };
+
+    const getCurrentMonth = () => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
     };
 
     const handleDelete = (id: number) => {
