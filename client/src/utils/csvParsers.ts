@@ -64,8 +64,12 @@ export const parseMizrahiCSV = (csvText: string): ParsedTransaction[] => {
         const merchant = cols[2].replace(/"/g, "").trim();
         const credit = parseNumericString(cols[3]);
         const debit = parseNumericString(cols[4]);
-        const skipMerchants = ["ויזה כאל", "הרשאה", "דינרס", "ישראכרט", "ביט", "העברה"];
-
+        const skipMerchants = [
+            "הרשאה כאל",
+            "הרשאה ישראכרט",
+            "הרשאה דינרס",
+            "ויזה כאל",
+        ];
 
         if (!date || !merchant) continue;
         if (skipMerchants.some((skip) => merchant.includes(skip))) continue;
