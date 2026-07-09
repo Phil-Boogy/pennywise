@@ -57,8 +57,13 @@ const BudgetPage = () => {
     const currentMonth = getCurrentMonth();
 
     // CSV state
-    const [uploadedFiles, setUploadedFiles] = useState<{ name: string; format: BankFormat; count: number }[]>([]);
-    const [allTransactions, setAllTransactions] = useState<ParsedTransaction[]>([]);
+    const [uploadedFiles, setUploadedFiles] = useState<{
+        id: string;
+        name: string;
+        format: BankFormat;
+        count: number
+    }[]>([]);
+    const [allTransactions, setAllTransactions] = useState<(ParsedTransaction & { fileId: string })[]>([]);
     const [selectedFormat, setSelectedFormat] = useState<BankFormat>("mizrahi");
 
     // Budget state
@@ -101,6 +106,9 @@ const BudgetPage = () => {
         if (settings?.savings_goal) {
             setSavingsGoal(String(Number(settings.savings_goal)));
         }
+        if (settings?.confirmed_income) {
+            setConfirmedIncome(String(Number(settings.confirmed_income)));
+        }
     }, [settings]);
 
     // derived values
@@ -125,11 +133,12 @@ const BudgetPage = () => {
                     setError("No transactions found. Check the bank format selection.");
                     return;
                 }
-                const enriched = enrichWithOccurrences(parsed);
+                const fileId = `${file.name}-${Date.now()}`;
+                const enriched = enrichWithOccurrences(parsed).map((t) => ({ ...t, fileId }));
                 setAllTransactions((prev) => [...prev, ...enriched]);
                 setUploadedFiles((prev) => [
                     ...prev,
-                    { name: file.name, format: selectedFormat, count: enriched.length },
+                    { id: fileId, name: file.name, format: selectedFormat, count: enriched.length },
                 ]);
                 setError(null);
             } catch {
@@ -177,6 +186,43 @@ const BudgetPage = () => {
         }
     };
 
+    const handleResubmit = async () => {
+        setAiLoading(true);
+        setError(null);
+        try {
+            const result = await generateBudget(
+                allTransactions.map((t) => ({
+                    date: t.date,
+                    merchant: t.merchant,
+                    amount: t.amount,
+                    type: t.type,
+                    occurrences: t.occurrences ?? 1,
+                })),
+                savings,
+                {
+                    lockedAmounts: Object.fromEntries(
+                        [...lockedCategories].map((id) => [id, Number(amounts[id])])
+                    ),
+                    confirmedIncome: Number(confirmedIncome),
+                }
+            );
+
+            // only update unlocked categories
+            const suggested: Record<number, string> = {};
+            result.budget_suggestions.forEach((s) => {
+                if (!lockedCategories.has(s.category_id)) {
+                    suggested[s.category_id] = String(s.suggested_amount);
+                }
+            });
+            setAmounts((prev) => ({ ...prev, ...suggested }));
+            setAiSummary(result.summary);
+        } catch {
+            setError("Resubmit failed. Please try again.");
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
     const handleToggleExclude = (index: number, amount: number) => {
         const next = new Set(excludedSources);
         if (next.has(index)) {
@@ -216,7 +262,11 @@ const BudgetPage = () => {
     const handleSave = async () => {
         const month = currentMonth;
 
-        await dispatch(updateMonthlySettings({ month, savings_goal: savings }));
+        await dispatch(updateMonthlySettings({
+            month,
+            savings_goal: savings,
+            confirmed_income: Number(confirmedIncome),
+        }));
 
         const promises = expenseCategories
             .filter((cat) => amounts[cat.id] && Number(amounts[cat.id]) > 0)
@@ -286,7 +336,9 @@ const BudgetPage = () => {
                                 label={`${f.name} (${f.count})`}
                                 size="small"
                                 onDelete={() => {
+                                    const fileId = uploadedFiles[i].id;
                                     setUploadedFiles((prev) => prev.filter((_, idx) => idx !== i));
+                                    setAllTransactions((prev) => prev.filter((t) => t.fileId !== fileId));
                                 }}
                             />
                         ))}
@@ -378,6 +430,18 @@ const BudgetPage = () => {
             >
                 {aiLoading ? <CircularProgress size={20} /> : "✨ Generate Budget with AI"}
             </Button>
+
+            {incomeSources.length > 0 && (
+                <Button
+                    variant="outlined"
+                    fullWidth
+                    onClick={handleResubmit}
+                    disabled={aiLoading || lockedCategories.size === 0}
+                    sx={{ mb: 2 }}
+                >
+                    {aiLoading ? <CircularProgress size={20} /> : "🔄 Resubmit with Locked Categories"}
+                </Button>
+            )}
 
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 

@@ -6,6 +6,7 @@ export const getAllExpenseCategories = (user_id: number) => {
         SELECT id, name
         FROM expense_categories
         WHERE user_id = $1
+        ORDER BY id ASC
     `, [user_id]);
 };
 

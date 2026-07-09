@@ -94,10 +94,14 @@ export const generateBudget = async (
             occurrences: number;
         }[];
         savingsGoal: number;
+        overrides?: {
+            lockedAmounts: Record<number, number>;
+            confirmedIncome: number;
+        };
     }>,
     res: Response
 ) => {
-    const { transactions, savingsGoal } = req.body;
+    const { transactions, savingsGoal, overrides } = req.body;
     const userId = req.userId!;
 
     try {
@@ -117,12 +121,11 @@ export const generateBudget = async (
             amount: Number(e.amount),
         }));
 
-        // build budget vs actual history from DB
         const previousBudgetHistory = budgetsResult.rows.map((b) => ({
             month: b.month,
             category: b.category,
             budgeted: Number(b.amount),
-            actual: 0, // we'll enhance this later with actual expense data
+            actual: 0,
         }));
 
         const result = await generateUnifiedBudget({
@@ -131,6 +134,7 @@ export const generateBudget = async (
             cashExpenses,
             savingsGoal: Number(savingsGoal),
             previousBudgetHistory,
+            overrides,
         });
 
         res.json(result);

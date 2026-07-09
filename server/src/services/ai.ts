@@ -78,6 +78,10 @@ export interface UnifiedBudgetInput {
         budgeted: number;
         actual: number;
     }[];
+    overrides?: {
+        lockedAmounts: Record<number, number>;
+        confirmedIncome: number;
+    };
 }
 
 export interface UnifiedBudgetResponse {
@@ -261,6 +265,17 @@ ${input.cashExpenses.length > 0
 Total cash expenses: ₪${totalCashExpenses}/month
 
 Savings goal: ₪${input.savingsGoal}/month
+${input.overrides ? `
+User confirmed monthly income: ₪${input.overrides.confirmedIncome} (use this instead of deriving from transactions)
+
+Locked category amounts (do NOT change these):
+${Object.entries(input.overrides.lockedAmounts)
+                .map(([id, amount]) => {
+                    const cat = input.categories.find((c) => c.id === Number(id));
+                    return `- ${cat?.name ?? id}: ₪${amount} (LOCKED)`;
+                })
+                .join("\n")}
+` : ""}
 
 Previous budget vs actual history:
 ${input.previousBudgetHistory.length > 0

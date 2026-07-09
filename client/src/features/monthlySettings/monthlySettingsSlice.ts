@@ -23,8 +23,12 @@ export const fetchMonthlySettings = createAsyncThunk(
 
 export const updateMonthlySettings = createAsyncThunk(
     "monthlySettings/update",
-    async ({ month, savings_goal }: { month: string; savings_goal: number }) => {
-        return await settingsApi.saveMonthlySettings(month, savings_goal);
+    async ({ month, savings_goal, confirmed_income }: {
+        month: string;
+        savings_goal: number;
+        confirmed_income: number;
+    }) => {
+        return await settingsApi.saveMonthlySettings(month, savings_goal, confirmed_income);
     }
 );
 

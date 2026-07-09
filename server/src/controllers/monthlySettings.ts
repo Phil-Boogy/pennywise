@@ -24,13 +24,13 @@ export const getSettings = async (
 };
 
 export const saveSettings = async (
-    req: AuthedRequest<{ month: string }, {}, { savings_goal: number }>,
+    req: AuthedRequest<{ month: string }, {}, { savings_goal: number; confirmed_income: number }>,
     res: Response
 ) => {
     const { month } = req.params;
-    const { savings_goal } = req.body;
+    const { savings_goal, confirmed_income } = req.body;
     try {
-        const result = await upsertMonthlySettings(month, savings_goal, req.userId!);
+        const result = await upsertMonthlySettings(month, savings_goal, confirmed_income ?? 0, req.userId!);
         res.json(result.rows[0]);
     } catch (error) {
         console.log(error);

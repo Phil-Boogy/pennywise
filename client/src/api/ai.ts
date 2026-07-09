@@ -27,17 +27,6 @@ export interface UnifiedBudgetResponse {
     summary: string;
 }
 
-export const getSuggestedBudget = async (
-    month: string,
-    savingsGoal: number
-): Promise<BudgetSuggestion> => {
-    const response = await api.post("/api/ai/suggest-budget", {
-        month,
-        savingsGoal,
-    });
-    return response.data;
-};
-
 export interface TransactionAnalysis {
     transactions: {
         date: string;
@@ -64,6 +53,17 @@ export interface TransactionAnalysis {
     summary: string;
 }
 
+export const getSuggestedBudget = async (
+    month: string,
+    savingsGoal: number
+): Promise<BudgetSuggestion> => {
+    const response = await api.post("/api/ai/suggest-budget", {
+        month,
+        savingsGoal,
+    });
+    return response.data;
+};
+
 export const analyzeTransactions = async (
     transactions: {
         date: string;
@@ -87,11 +87,16 @@ export const generateBudget = async (
         type: "credit" | "debit";
         occurrences: number;
     }[],
-    savingsGoal: number
+    savingsGoal: number,
+    overrides?: {
+        lockedAmounts: Record<number, number>;
+        confirmedIncome: number;
+    }
 ): Promise<UnifiedBudgetResponse> => {
     const response = await api.post("/api/ai/generate-budget", {
         transactions,
         savingsGoal,
+        overrides,
     });
     return response.data;
 };
