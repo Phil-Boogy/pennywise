@@ -29,6 +29,12 @@ export const refreshToken = async () => {
     return response.json();
 };
 
+let isRefreshing = false;
+let failedQueue: Array<{
+    resolve: (token: string) => void;
+    reject: (error: unknown) => void;
+}> = [];
+
 const processQueue = (error: unknown, token: string | null = null) => {
     failedQueue.forEach((prom) => {
         if (error) {
