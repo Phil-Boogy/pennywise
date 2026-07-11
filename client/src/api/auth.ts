@@ -16,15 +16,18 @@ export const setAuthToken = (token: string | null) => {
 };
 
 export const refreshToken = async () => {
-    const response = await api.post("/api/auth/refresh");
-    return response.data;
+    const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/auth/refresh`,
+        {
+            method: "POST",
+            credentials: "include",
+        }
+    );
+    if (!response.ok) {
+        throw new Error("Refresh failed");
+    }
+    return response.json();
 };
-
-let isRefreshing = false;
-let failedQueue: Array<{
-    resolve: (token: string) => void;
-    reject: (error: unknown) => void;
-}> = [];
 
 const processQueue = (error: unknown, token: string | null = null) => {
     failedQueue.forEach((prom) => {
