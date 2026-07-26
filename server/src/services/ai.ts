@@ -269,14 +269,16 @@ export const categorizeMerchants = async (
 ): Promise<CategorizedMerchantResult[]> => {
     if (input.merchants.length === 0) return [];
 
-    const systemPrompt = `You are a financial analyst identifying merchants for an Israeli household's bank/credit card statement.
-Use web search when a merchant name is unclear or unfamiliar (Hebrew business names, abbreviations, etc.) to figure out what kind of business it is.
+    const systemPrompt = `You are a JSON-only transaction categorization engine. Your entire response must be valid JSON parseable by JSON.parse(). Do not write any text before or after the JSON. Do not explain yourself. Do not say "I'll analyze" or anything conversational.
+
+You categorize transactions from Israeli household bank and credit card statements.
+Use web search when a merchant name is unclear or unfamiliar (Hebrew business names, abbreviations, etc.).
 
 Rules:
 - You may ONLY use the expense categories provided. Never invent new ones.
 - If a merchant looks like income (salary, transfer in, refund) rather than a purchase, set category_id and category_name to null.
 - If you cannot confidently identify a merchant, set category_id and category_name to null and explain why in reasoning.
-- Return ONLY valid JSON, no markdown, no preamble.`;
+- Your response must start with { and end with }. Nothing else.`;
 
     const userPrompt = `Expense categories available:
 ${input.categories.map((c) => `- id: ${c.id}, name: ${c.name}`).join("\n")}
@@ -390,6 +392,9 @@ Return JSON in this exact format:
         messages: [{ role: "user", content: userPrompt }],
         system: systemPrompt,
     });
+
+    console.log("Claude response content types:", message.content.map(c => c.type));
+    console.log("Full content:", JSON.stringify(message.content, null, 2));
 
     const content = message.content[0];
     if (content.type !== "text") {

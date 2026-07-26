@@ -33,9 +33,12 @@ const ExpensesPage = () => {
     const handleAdd = () => {
         if (!categoryId || !description.trim() || !amount) return;
 
+        const selectedCategory = expenseCategories.find((c) => c.id === Number(categoryId));
+
         dispatch(
             addExpense({
                 categoryId: Number(categoryId),
+                categoryName: selectedCategory?.name ?? "Unknown",
                 description: description.trim(),
                 amount: Number(amount),
             })

@@ -25,14 +25,17 @@ export const addExpense = createAsyncThunk(
     "expenses/addExpense",
     async ({
         categoryId,
+        categoryName,
         description,
         amount,
     }: {
         categoryId: number;
+        categoryName: string;
         description: string;
         amount: number;
     }) => {
-        return await expensesApi.createExpense(categoryId, description, amount);
+        const result = await expensesApi.createExpense(categoryId, description, amount);
+        return { ...result, category: categoryName };
     }
 );
 
