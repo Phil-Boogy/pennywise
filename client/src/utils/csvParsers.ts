@@ -4,6 +4,8 @@ export interface ParsedTransaction {
     amount: number;
     type: "credit" | "debit";
     occurrences?: number;
+    source: string; // "mizrahi" | "cal" | "isracard"
+    cardLastFour?: string; // extracted from CSV header
 }
 
 const parseNumericString = (raw: string): number => {
@@ -76,9 +78,9 @@ export const parseMizrahiCSV = (csvText: string): ParsedTransaction[] => {
         if (merchant.includes("הרשאה")) continue;
 
         if (credit > 0) {
-            transactions.push({ date: formatDate(date), merchant, amount: credit, type: "credit" });
+            transactions.push({ date: formatDate(date), merchant, amount: credit, type: "credit", source: "mizrahi" });
         } else if (debit > 0) {
-            transactions.push({ date: formatDate(date), merchant, amount: -debit, type: "debit" });
+            transactions.push({ date: formatDate(date), merchant, amount: -debit, type: "debit", source: "mizrahi" });
         }
     }
 
@@ -89,6 +91,8 @@ export const parseCalCSV = (csvText: string): ParsedTransaction[] => {
     const lines = csvText.split("\n");
     const transactions: ParsedTransaction[] = [];
     const datePattern = /^\d{1,2}\/\d{1,2}\/\d{2}/;
+
+    const cardLastFour = extractCardLastFour(csvText, "כאל");
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -105,7 +109,14 @@ export const parseCalCSV = (csvText: string): ParsedTransaction[] => {
         if (!date || !merchant) continue;
         if (isNaN(amount) || amount <= 0) continue;
 
-        transactions.push({ date: formatDate(date), merchant, amount: -amount, type: "debit" });
+        transactions.push({
+            date: formatDate(date),
+            merchant,
+            amount: -amount,
+            type: "debit",
+            source: "cal",
+            cardLastFour,
+        });
     }
 
     return transactions;
@@ -113,8 +124,9 @@ export const parseCalCSV = (csvText: string): ParsedTransaction[] => {
 
 export const parseIsracardCSV = (csvText: string): ParsedTransaction[] => {
     const lines = csvText.split("\n");
-    console.log("First 15 lines:", lines.slice(0, 15));
     const transactions: ParsedTransaction[] = [];
+
+    const cardLastFour = extractCardLastFour(csvText, "ישראכרט");
 
     // find header row — contains תאריך רכישה
     let dataStartRow = -1;
@@ -147,10 +159,18 @@ export const parseIsracardCSV = (csvText: string): ParsedTransaction[] => {
             merchant,
             amount: -billingAmount,
             type: "debit",
+            source: "isracard",
+            cardLastFour,
         });
     }
 
     return transactions;
+};
+
+const extractCardLastFour = (csvText: string, label: string): string | undefined => {
+    const pattern = new RegExp(`${label}\\s*-\\s*(\\d{4})`);
+    const match = csvText.match(pattern);
+    return match ? match[1] : undefined;
 };
 
 const formatIsracardDate = (raw: string): string => {

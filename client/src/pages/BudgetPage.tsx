@@ -15,18 +15,23 @@ import {
     Chip,
     Checkbox,
     CircularProgress,
+    Collapse,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import DownloadIcon from "@mui/icons-material/Download";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { useAppDispatch, useAppSelector } from "../hooks/redux";
 import { fetchExpenseCategories } from "../features/categories/categoriesSlice";
 import { addBudgetItem, updateBudgetItem, fetchBudgetsByMonth } from "../features/budget/budgetSlice";
 import { fetchMonthlySettings, updateMonthlySettings } from "../features/monthlySettings/monthlySettingsSlice";
 import { fetchCashExpenses, addCashExpense, removeCashExpense } from "../features/cashExpenses/cashExpensesSlice";
+import { runCategorizeTransactions, clearCategorizedTransactions } from "../features/categorizedTransactions/categorizedTransactionsSlice";
 import { parseMizrahiCSV, parseCalCSV, parseIsracardCSV, enrichWithOccurrences } from "../utils/csvParsers";
 import type { ParsedTransaction } from "../utils/csvParsers";
 import { generateBudget } from "../api/ai";
-import type { UnifiedBudgetResponse } from "../api/ai";
+import type { CategorizedTransaction, IncomeSourceInput } from "../api/ai";
 
 type BankFormat = "mizrahi" | "cal" | "isracard";
 
@@ -35,6 +40,17 @@ const BANK_OPTIONS: { value: BankFormat; label: string }[] = [
     { value: "cal", label: "כאל" },
     { value: "isracard", label: "ישראכרט" },
 ];
+
+const SOURCE_LABELS: Record<string, string> = {
+    mizrahi: "Mizrahi",
+    cal: "Cal",
+    isracard: "Isracard",
+};
+
+const formatSource = (source: string, cardLastFour?: string) => {
+    const label = SOURCE_LABELS[source] ?? source;
+    return cardLastFour ? `${label} •••• ${cardLastFour}` : label;
+};
 
 const parsers: Record<BankFormat, (csv: string) => ParsedTransaction[]> = {
     mizrahi: parseMizrahiCSV,
@@ -47,12 +63,35 @@ const getCurrentMonth = () => {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 };
 
+const buildIncomeSources = (categorized: CategorizedTransaction[]): IncomeSourceInput[] => {
+    const byMerchant = new Map<string, { total: number; months: Set<string> }>();
+    categorized.forEach((t) => {
+        if (t.type !== "credit") return;
+        const monthKey = t.date.slice(0, 7);
+        const entry = byMerchant.get(t.merchant) ?? { total: 0, months: new Set<string>() };
+        entry.total += t.amount;
+        entry.months.add(monthKey);
+        byMerchant.set(t.merchant, entry);
+    });
+
+    return Array.from(byMerchant.entries()).map(([merchant, { total, months }]) => ({
+        merchant,
+        average_monthly_amount: Math.round(total / months.size),
+        months_seen: months.size,
+    }));
+};
+
 const BudgetPage = () => {
     const dispatch = useAppDispatch();
     const { expenseCategories } = useAppSelector((state) => state.categories);
     const { items: budgets } = useAppSelector((state) => state.budget);
     const { settings } = useAppSelector((state) => state.monthlySettings);
     const { items: cashExpenses } = useAppSelector((state) => state.cashExpenses);
+    const {
+        categorized,
+        categoriesSummary,
+        loading: categorizeLoading,
+    } = useAppSelector((state) => state.categorizedTransactions);
 
     const currentMonth = getCurrentMonth();
 
@@ -66,12 +105,16 @@ const BudgetPage = () => {
     const [allTransactions, setAllTransactions] = useState<(ParsedTransaction & { fileId: string })[]>([]);
     const [selectedFormat, setSelectedFormat] = useState<BankFormat>("mizrahi");
 
+    // Pass 1 state
+    const [analyzed, setAnalyzed] = useState(false);
+    const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
+
     // Budget state
     const [savingsGoal, setSavingsGoal] = useState("");
     const [amounts, setAmounts] = useState<Record<number, string>>({});
     const [lockedCategories, setLockedCategories] = useState<Set<number>>(new Set());
     const [confirmedIncome, setConfirmedIncome] = useState("");
-    const [incomeSources, setIncomeSources] = useState<UnifiedBudgetResponse["income_sources"]>([]);
+    const [incomeSources, setIncomeSources] = useState<IncomeSourceInput[]>([]);
     const [excludedSources, setExcludedSources] = useState<Set<number>>(new Set());
     const [aiSummary, setAiSummary] = useState("");
 
@@ -149,26 +192,59 @@ const BudgetPage = () => {
         e.target.value = "";
     };
 
-    const handleGenerateBudget = async () => {
+    const handleAnalyzeTransactions = async () => {
         if (allTransactions.length === 0) {
-            setError("Please upload at least one CSV file before generating a budget.");
+            setError("Please upload at least one CSV file before analyzing.");
+            return;
+        }
+        setError(null);
+        try {
+            const result = await dispatch(
+                runCategorizeTransactions({
+                    transactions: allTransactions.map((t) => ({
+                        date: t.date,
+                        merchant: t.merchant,
+                        amount: t.amount,
+                        type: t.type,
+                        occurrences: t.occurrences ?? 1,
+                        source: t.source,
+                        cardLastFour: t.cardLastFour,
+                    })),
+                    month: currentMonth,
+                })
+            ).unwrap();
+
+            const sources = buildIncomeSources(result.categorized);
+            setIncomeSources(sources);
+            setExcludedSources(new Set());
+            setConfirmedIncome(String(sources.reduce((sum, s) => sum + s.average_monthly_amount, 0)));
+            setAnalyzed(true);
+        } catch {
+            setError("Failed to analyze transactions. Please try again.");
+        }
+    };
+
+    const handleGenerateBudget = async () => {
+        if (categoriesSummary.length === 0) {
+            setError("Please analyze transactions before generating a budget.");
             return;
         }
         setAiLoading(true);
         setError(null);
         try {
+            const activeIncomeSources = incomeSources.filter((_, i) => !excludedSources.has(i));
+            const categoryTotals = categoriesSummary.map((c) => ({
+                category_id: c.category_id,
+                category_name: c.category_name,
+                total: c.total,
+            }));
+
             const result = await generateBudget(
-                allTransactions.map((t) => ({
-                    date: t.date,
-                    merchant: t.merchant,
-                    amount: t.amount,
-                    type: t.type,
-                    occurrences: t.occurrences ?? 1,
-                })),
+                categoryTotals,
+                activeIncomeSources,
                 savings
             );
 
-            setIncomeSources(result.income_sources);
             setConfirmedIncome(String(result.suggested_total_income));
             setAiSummary(result.summary);
 
@@ -190,14 +266,16 @@ const BudgetPage = () => {
         setAiLoading(true);
         setError(null);
         try {
+            const activeIncomeSources = incomeSources.filter((_, i) => !excludedSources.has(i));
+            const categoryTotals = categoriesSummary.map((c) => ({
+                category_id: c.category_id,
+                category_name: c.category_name,
+                total: c.total,
+            }));
+
             const result = await generateBudget(
-                allTransactions.map((t) => ({
-                    date: t.date,
-                    merchant: t.merchant,
-                    amount: t.amount,
-                    type: t.type,
-                    occurrences: t.occurrences ?? 1,
-                })),
+                categoryTotals,
+                activeIncomeSources,
                 savings,
                 {
                     lockedAmounts: Object.fromEntries(
@@ -257,6 +335,43 @@ const BudgetPage = () => {
         }));
         setNewCashDesc("");
         setNewCashAmount("");
+    };
+
+    const toggleExpandedCategory = (categoryId: number) => {
+        setExpandedCategories((prev) => {
+            const next = new Set(prev);
+            if (next.has(categoryId)) {
+                next.delete(categoryId);
+            } else {
+                next.add(categoryId);
+            }
+            return next;
+        });
+    };
+
+    const handleDownloadCSV = () => {
+        const header = ["Date", "Merchant", "Amount", "Type", "Category", "Source", "Card Last Four", "Reasoning"];
+        const rows = categorized.map((t) => [
+            t.date,
+            t.merchant,
+            String(t.amount),
+            t.type,
+            t.category_name ?? "",
+            t.source,
+            t.cardLastFour ?? "",
+            t.reasoning,
+        ]);
+        const csvContent = [header, ...rows]
+            .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+            .join("\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `categorized-transactions-${currentMonth.slice(0, 7)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
     };
 
     const handleSave = async () => {
@@ -339,6 +454,8 @@ const BudgetPage = () => {
                                     const fileId = uploadedFiles[i].id;
                                     setUploadedFiles((prev) => prev.filter((_, idx) => idx !== i));
                                     setAllTransactions((prev) => prev.filter((t) => t.fileId !== fileId));
+                                    setAnalyzed(false);
+                                    dispatch(clearCategorizedTransactions());
                                 }}
                             />
                         ))}
@@ -420,40 +537,69 @@ const BudgetPage = () => {
                 )}
             </Paper>
 
-            {/* Generate Button */}
+            {/* Step 1: Analyze Transactions */}
             <Button
                 variant="contained"
                 fullWidth
-                onClick={handleGenerateBudget}
-                disabled={aiLoading || allTransactions.length === 0}
+                onClick={handleAnalyzeTransactions}
+                disabled={categorizeLoading || allTransactions.length === 0}
                 sx={{ mb: 2 }}
             >
-                {aiLoading ? <CircularProgress size={20} /> : "✨ Generate Budget with AI"}
+                {categorizeLoading ? <CircularProgress size={20} /> : "🔍 Analyze Transactions"}
             </Button>
-
-            {incomeSources.length > 0 && (
-                <Button
-                    variant="outlined"
-                    fullWidth
-                    onClick={handleResubmit}
-                    disabled={aiLoading || lockedCategories.size === 0}
-                    sx={{ mb: 2 }}
-                >
-                    {aiLoading ? <CircularProgress size={20} /> : "🔄 Resubmit with Locked Categories"}
-                </Button>
-            )}
 
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-            {/* AI Summary */}
-            {aiSummary && (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                    {aiSummary}
-                </Alert>
+            {/* Categorized Transactions (Pass 1 result) */}
+            {analyzed && (
+                <Paper sx={{ p: 2, mb: 2 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                            Categorized Transactions
+                        </Typography>
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<DownloadIcon />}
+                            onClick={handleDownloadCSV}
+                        >
+                            Download CSV
+                        </Button>
+                    </Box>
+                    <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                        {categoriesSummary.map((cat) => (
+                            <Box key={cat.category_id}>
+                                <Box
+                                    sx={{ display: "flex", alignItems: "center", gap: 1, cursor: "pointer" }}
+                                    onClick={() => toggleExpandedCategory(cat.category_id)}
+                                >
+                                    <Typography sx={{ flexGrow: 1, fontWeight: 500 }}>{cat.category_name}</Typography>
+                                    <Typography>₪{cat.total.toLocaleString()}</Typography>
+                                    <IconButton size="small">
+                                        {expandedCategories.has(cat.category_id) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                    </IconButton>
+                                </Box>
+                                <Collapse in={expandedCategories.has(cat.category_id)}>
+                                    <List dense sx={{ pl: 2 }}>
+                                        {cat.transactions.map((t, i) => (
+                                            <ListItem key={i} sx={{ py: 0.25 }}>
+                                                <ListItemText
+                                                    primary={`${t.merchant} — ₪${t.amount.toLocaleString()}`}
+                                                    secondary={`${t.date} · ${formatSource(t.source, t.cardLastFour)}`}
+                                                />
+                                            </ListItem>
+                                        ))}
+                                    </List>
+                                </Collapse>
+                                <Divider sx={{ mt: 1 }} />
+                            </Box>
+                        ))}
+                    </Box>
+                </Paper>
             )}
 
-            {/* Income Sources */}
-            {incomeSources.length > 0 && (
+            {/* Income Sources (from Pass 1 credit transactions) */}
+            {analyzed && incomeSources.length > 0 && (
                 <Paper sx={{ p: 2, mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: "bold", mb: 1 }}>
                         Income Sources
@@ -490,6 +636,36 @@ const BudgetPage = () => {
                         />
                     </Box>
                 </Paper>
+            )}
+
+            {/* Step 2: Generate Budget */}
+            {analyzed && (
+                <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={handleGenerateBudget}
+                    disabled={aiLoading || categoriesSummary.length === 0}
+                    sx={{ mb: 2 }}
+                >
+                    {aiLoading ? <CircularProgress size={20} /> : "✨ Generate Budget"}
+                </Button>
+            )}
+
+            {aiSummary && (
+                <>
+                    <Button
+                        variant="outlined"
+                        fullWidth
+                        onClick={handleResubmit}
+                        disabled={aiLoading || lockedCategories.size === 0}
+                        sx={{ mb: 2 }}
+                    >
+                        {aiLoading ? <CircularProgress size={20} /> : "🔄 Resubmit with Locked Categories"}
+                    </Button>
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                        {aiSummary}
+                    </Alert>
+                </>
             )}
 
             {/* Category Budgets */}

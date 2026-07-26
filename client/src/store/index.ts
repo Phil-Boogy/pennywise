@@ -6,6 +6,7 @@ import incomeReducer from "../features/income/incomeSlice";
 import budgetReducer from "../features/budget/budgetSlice";
 import monthlySettingsReducer from "../features/monthlySettings/monthlySettingsSlice";
 import cashExpensesReducer from "../features/cashExpenses/cashExpensesSlice";
+import categorizedTransactionsReducer from "../features/categorizedTransactions/categorizedTransactionsSlice";
 
 export const store = configureStore({
     reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
         budget: budgetReducer,
         monthlySettings: monthlySettingsReducer,
         cashExpenses: cashExpensesReducer,
+        categorizedTransactions: categorizedTransactionsReducer,
     },
 });
 

@@ -53,6 +53,50 @@ export interface TransactionAnalysis {
     summary: string;
 }
 
+export interface CategorizedTransaction {
+    date: string;
+    merchant: string;
+    amount: number;
+    type: "credit" | "debit";
+    category_id: number | null;
+    category_name: string | null;
+    reasoning: string;
+    source: string;
+    cardLastFour?: string;
+}
+
+export interface CategorySummaryTransaction {
+    date: string;
+    merchant: string;
+    amount: number;
+    source: string;
+    cardLastFour?: string;
+}
+
+export interface CategorySummary {
+    category_id: number;
+    category_name: string;
+    total: number;
+    transactions: CategorySummaryTransaction[];
+}
+
+export interface CategorizeTransactionsResponse {
+    categorized: CategorizedTransaction[];
+    categories_summary: CategorySummary[];
+}
+
+export interface CategoryTotal {
+    category_id: number;
+    category_name: string;
+    total: number;
+}
+
+export interface IncomeSourceInput {
+    merchant: string;
+    average_monthly_amount: number;
+    months_seen: number;
+}
+
 export const getSuggestedBudget = async (
     month: string,
     savingsGoal: number
@@ -79,14 +123,28 @@ export const analyzeTransactions = async (
     return response.data;
 };
 
-export const generateBudget = async (
+export const categorizeTransactions = async (
     transactions: {
         date: string;
         merchant: string;
         amount: number;
         type: "credit" | "debit";
         occurrences: number;
+        source: string;
+        cardLastFour?: string;
     }[],
+    month: string
+): Promise<CategorizeTransactionsResponse> => {
+    const response = await api.post("/api/ai/categorize-transactions", {
+        transactions,
+        month,
+    });
+    return response.data;
+};
+
+export const generateBudget = async (
+    categoryTotals: CategoryTotal[],
+    incomeSources: IncomeSourceInput[],
     savingsGoal: number,
     overrides?: {
         lockedAmounts: Record<number, number>;
@@ -94,7 +152,8 @@ export const generateBudget = async (
     }
 ): Promise<UnifiedBudgetResponse> => {
     const response = await api.post("/api/ai/generate-budget", {
-        transactions,
+        categoryTotals,
+        incomeSources,
         savingsGoal,
         overrides,
     });
