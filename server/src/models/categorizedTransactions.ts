@@ -85,7 +85,7 @@ export const getCategoryTotalsByMonth = (month: string, user_id: number) => {
         SELECT
             t.category_id,
             t.category_name,
-            t.total / NULLIF(mc.cnt, 0) as total
+            ROUND(t.total / NULLIF(mc.cnt, 0)) as total
         FROM totals t, month_count mc
         ORDER BY total DESC`,
         [user_id, month]
