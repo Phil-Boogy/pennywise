@@ -64,16 +64,29 @@ export const getCategorizedTransactionsByMonth = (month: string, user_id: number
 
 export const getCategoryTotalsByMonth = (month: string, user_id: number) => {
     return pool.query<CategoryTotal>(
-        `SELECT
-            category_id,
-            category_name,
-            SUM(amount) as total
-        FROM categorized_transactions
-        WHERE user_id = $1
-            AND month = $2
-            AND type = 'debit'
-            AND category_id IS NOT NULL
-        GROUP BY category_id, category_name
+        `WITH month_count AS (
+            SELECT COUNT(DISTINCT LEFT(date, 7)) AS cnt
+            FROM categorized_transactions
+            WHERE user_id = $1
+                AND month = $2
+        ),
+        totals AS (
+            SELECT
+                category_id,
+                category_name,
+                SUM(amount) as total
+            FROM categorized_transactions
+            WHERE user_id = $1
+                AND month = $2
+                AND type = 'debit'
+                AND category_id IS NOT NULL
+            GROUP BY category_id, category_name
+        )
+        SELECT
+            t.category_id,
+            t.category_name,
+            t.total / NULLIF(mc.cnt, 0) as total
+        FROM totals t, month_count mc
         ORDER BY total DESC`,
         [user_id, month]
     );
